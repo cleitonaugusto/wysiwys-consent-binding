@@ -98,8 +98,8 @@ A set of normative conformance vectors — named surfaces with their expected `d
 | --- | --- |
 | **A2UI** (Google) | A new optional `action.consent` field on the dispatched `action`. |
 | **AG-UI** (CopilotKit) | **Define** what the existing `resume[].metadata` "signature proving the human decision was not tampered with" covers: the consent digest over the rendered generative-UI surface (A2UI/MCP-UI/Open-JSON-UI) tied to the `toolCallId`/`interruptId`. The hook already exists; this gives it a verifiable contract. |
-| **MCP-UI** (MS + Shopify) | For the iframe-rendered surface, the host carries the consent digest in the `postMessage` result of the user action. |
-| **Open-JSON-UI** (OpenAI) | The consent digest accompanies the action event emitted from the rendered declarative surface. |
+| **MCP-UI / MCP Apps** (Microsoft, Shopify, Anthropic; unifies the OpenAI Apps SDK) | the consent binding travels with the iframe→host action message (`{ type: "tool", payload: { toolName, params } }`); the host recomputes the surface it is about to act on and refuses on mismatch — making an app-rendered surface a *verifiable* approval surface, not a host-side TODO. |
+| **Open-JSON-UI** (OpenAI) | the consent binding accompanies the action event emitted from the rendered declarative surface (OpenAI's Apps SDK schema, now flowing through MCP Apps). |
 
 Because **AG-UI is the runtime that carries A2UI / MCP-UI / Open-JSON-UI**, defining the binding at the AG-UI layer lets all three inherit WYSIWYS from one place — the highest-leverage point.
 
