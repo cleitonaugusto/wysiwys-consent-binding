@@ -43,15 +43,41 @@ consent_digest = H( canonical(
 
 `H` is a named hash (default `sha256`). `canonical` is deterministic: fixed field order, length-prefixed strings, explicit algorithm id. Geometry MAY be included so clickjacking-style placement changes are covered.
 
+**Normative byte layout (canonical v1).** All integers little-endian; all floats IEEE-754 `f64` little-endian; strings are length-prefixed UTF-8 (`u32` length, then bytes):
+
+```text
+"WYSIWYS\x01"                         8-byte magic + format version
+u32(node_count)
+for each node, in surface order:
+  u8  interactive                     0 = static, 1 = interactive
+  str id
+  str content                         resolved displayed text/label/value ("" if none)
+  u8  target_present                  0 | 1
+  [ str target ]                      only if target_present == 1
+  u8  geometry_present                0 | 1
+  [ f64 x, f64 y, f64 w, f64 h ]      only if geometry_present == 1
+str action                            the action name the consent concerns
+```
+
+Any implementation that reproduces these bytes and hashes them with `alg` gets the same `digest`. The conformance vectors (below) pin it.
+
 ### 4.2 Carrying the binding
 
 When the renderer dispatches the action (or the client submits the human's decision), it includes:
 
 ```json
-"consent": { "alg": "sha256", "digest": "<base64>", "sig": "<optional base64>" }
+"consent": { "alg": "sha256", "digest": "<base64>", "nonce": 7, "sig": "<optional base64>" }
 ```
 
-`sig`, when present, is a signature over `(alg, digest, action_id, nonce)` by a key the verifier trusts (renderer or device key). Signing is a deployment choice; the digest alone already lets a verifier that recomputes the surface detect drift.
+`sig`, when present, is a signature by a key the verifier trusts (renderer or device key) over the deterministic message:
+
+```text
+"WYSIWYS-SIG\x01"  str alg  str digest  str action  u64(nonce)
+```
+
+(same string/integer encoding as §4.1; the distinct prefix prevents collision with the surface bytes). `nonce` gives replay resistance. Signing is a deployment choice; the digest alone already lets a verifier that recomputes the surface detect drift.
+
+**Protocol placement.** In AG-UI the binding rides in `resume[].metadata` (the slot the spec describes as "a signature proving the human decision was not tampered with"), namespaced under a `wysiwys` key and tied to the `interruptId`/`toolCallId`. In A2UI it is a new optional `action.consent` field; in MCP-UI it is carried in the `postMessage` result; in Open-JSON-UI it accompanies the action event.
 
 ### 4.3 Verification contract
 
@@ -61,6 +87,10 @@ Before acting on a consequential action, the **verifier** recomputes the consent
 
 - Proves: the executed action corresponds to the exact surface the human approved (integrity + non-repudiation of consent).
 - Does **not** prove: that the displayed values were themselves true, or that settlement succeeded — those are separate attestations.
+
+### 4.5 Conformance
+
+A set of normative conformance vectors — named surfaces with their expected `digest` under the canonical v1 layout — is published alongside this document as [`conformance/wysiwys-vectors.json`](./conformance/wysiwys-vectors.json). An implementation conforms if, for each vector's `surface`, it produces the listed `digest`. The vectors cover a baseline surface, a swapped displayed value, a swapped action target under an unchanged label, and a geometry-bound surface.
 
 ## 5. Protocol bindings (how it maps)
 

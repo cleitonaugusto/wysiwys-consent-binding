@@ -1,0 +1,132 @@
+{
+  "alg": "sha256",
+  "canonical_version": 1,
+  "doi": "10.5281/zenodo.23933180",
+  "note": "Normative conformance vectors. An implementation that reproduces the documented canonical byte layout (src/canonical.rs) must produce each digest below. Little-endian integers and IEEE-754 f64.",
+  "spec": "WYSIWYS Consent Binding for Agent UIs",
+  "vectors": [
+    {
+      "alg": "sha256",
+      "digest": "2RGLfiJN9NaTjiOMAylPZG1t1eIYZN560d0t7p/cj+M=",
+      "name": "purchase",
+      "note": "baseline purchase surface",
+      "surface": {
+        "action": "confirm",
+        "nodes": [
+          {
+            "content": "Purchase License",
+            "geometry": null,
+            "id": "title",
+            "interactive": false,
+            "target": null
+          },
+          {
+            "content": "$1,188.00",
+            "geometry": null,
+            "id": "total",
+            "interactive": false,
+            "target": null
+          },
+          {
+            "content": "Confirm Purchase",
+            "geometry": null,
+            "id": "confirm",
+            "interactive": true,
+            "target": null
+          }
+        ]
+      }
+    },
+    {
+      "alg": "sha256",
+      "digest": "rZ5CESGZabkmdCDrgYcouS+xEB7NnU/BdK1kbeLOCvc=",
+      "name": "purchase_swapped_total",
+      "note": "same tree, /total 1188 -> 11880 — digest differs",
+      "surface": {
+        "action": "confirm",
+        "nodes": [
+          {
+            "content": "Purchase License",
+            "geometry": null,
+            "id": "title",
+            "interactive": false,
+            "target": null
+          },
+          {
+            "content": "$11,880.00",
+            "geometry": null,
+            "id": "total",
+            "interactive": false,
+            "target": null
+          },
+          {
+            "content": "Confirm Purchase",
+            "geometry": null,
+            "id": "confirm",
+            "interactive": true,
+            "target": null
+          }
+        ]
+      }
+    },
+    {
+      "alg": "sha256",
+      "digest": "CoTWHiQlzHTYf+cO8iJtnLYRIUSe0NKJjwRQKP59J5c=",
+      "name": "openurl_good",
+      "note": "button whose openUrl target is the real host",
+      "surface": {
+        "action": "openUrl",
+        "nodes": [
+          {
+            "content": "Open the invoice PDF",
+            "geometry": null,
+            "id": "open",
+            "interactive": true,
+            "target": "https://billing.acme.example/invoice/1042.pdf"
+          }
+        ]
+      }
+    },
+    {
+      "alg": "sha256",
+      "digest": "d9LyO39CCQeI93wcil4n3jCK4J0tp46jsL90BkjTUmI=",
+      "name": "openurl_swapped_target",
+      "note": "same label, swapped destination — digest differs",
+      "surface": {
+        "action": "openUrl",
+        "nodes": [
+          {
+            "content": "Open the invoice PDF",
+            "geometry": null,
+            "id": "open",
+            "interactive": true,
+            "target": "https://acme-billing-secure.example/login"
+          }
+        ]
+      }
+    },
+    {
+      "alg": "sha256",
+      "digest": "Af7/cqmILBBYfleL4A/Jr/SqpLGss9hqJQpsn7d5wSc=",
+      "name": "with_geometry",
+      "note": "geometry bound (anti-clickjacking)",
+      "surface": {
+        "action": "confirm",
+        "nodes": [
+          {
+            "content": "Confirm Purchase",
+            "geometry": [
+              20.0,
+              64.0,
+              380.0,
+              44.0
+            ],
+            "id": "confirm",
+            "interactive": true,
+            "target": null
+          }
+        ]
+      }
+    }
+  ]
+}
