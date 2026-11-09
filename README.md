@@ -33,7 +33,7 @@ Google's **Agent Payments Protocol (AP2)** — now continuing in the **FIDO Alli
 
 ## Status
 
-Draft RFC v0.2 — feedback and per-protocol proposals welcome via issues. A runnable reference implementation of the binding exists and is available for review.
+Draft RFC v0.3 — feedback and per-protocol proposals welcome via issues. A runnable reference implementation of the binding exists and is available for review.
 
 ---
 

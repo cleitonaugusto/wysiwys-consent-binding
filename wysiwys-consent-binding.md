@@ -2,7 +2,7 @@
 
 **An open, protocol-neutral primitive that binds what a human saw to what an agent executes.**
 
-- **Status:** Draft RFC v0.2 · **Author:** Cleiton Augusto Correa Bezerra ([github.com/cleitonaugusto](https://github.com/cleitonaugusto)) · **DOI (v0.1 archived):** [10.5281/zenodo.23933180](https://doi.org/10.5281/zenodo.23933180)
+- **Status:** Draft RFC v0.3 · **Author:** Cleiton Augusto Correa Bezerra ([github.com/cleitonaugusto](https://github.com/cleitonaugusto)) · **DOI (v0.1 archived):** [10.5281/zenodo.23933180](https://doi.org/10.5281/zenodo.23933180)
 - **Applies to:** any protocol that renders agent-generated UI and acts on a human decision — A2UI (Google), AG-UI (CopilotKit), MCP-UI (Microsoft + Shopify), Open-JSON-UI (OpenAI), and custom equivalents.
 
 ## 1. Abstract
@@ -79,14 +79,18 @@ When the renderer dispatches the action (or the client submits the human's decis
 
 **Protocol placement.** In AG-UI the binding rides in `resume[].metadata` (the slot the spec describes as "a signature proving the human decision was not tampered with"), namespaced under a `wysiwys` key and tied to the `interruptId`/`toolCallId`. In A2UI it is a new optional `action.consent` field; in MCP-UI it is carried in the `postMessage` result; in Open-JSON-UI it accompanies the action event.
 
-### 4.3 Verification contract
+### 4.3 Verification contract — the dispatch gate
 
-Before acting on a consequential action, the **verifier** recomputes the consent surface it *intends to act on* (the amount it will charge, the URL it will open, the tool args it will run) and compares digests. **A mismatch MUST refuse the action.** The digest proves *what the human was shown and approved*; the *economic truth* (funds actually moved) still comes signed from whoever performs the settlement — the two are complementary, not a substitute for each other.
+The core operation is a **gate at dispatch**. Before acting on a consequential action, the **verifier** recomputes the consent surface it is *about to act on* — at the instant of dispatch, from the resolved action target (the amount it will charge, the URL it will open, the tool args it will run) — and compares digests. It MUST recompute at this point and MUST NOT reuse the surface captured at approval time, which is exactly the value an adversary can change in between. **Anything but an exact match MUST refuse the action.**
+
+This closes the render→act drift (T0→T1 / TOCTOU) *by construction*, and it needs **no trusted display**: the gate only has to run at the party that performs the call — the host / gateway / tool-dispatch point, which in an agent stack already sits downstream of the renderer. The digest proves *what the human was shown and approved*; the *economic truth* (funds actually moved) still comes signed from whoever performs the settlement — the two are complementary, not a substitute for each other.
 
 ### 4.4 Properties
 
-- Proves: the executed action corresponds to the exact surface the human approved (integrity + non-repudiation of consent).
-- Does **not** prove: that the displayed values were themselves true, or that settlement succeeded — those are separate attestations.
+What the binding gives is **integrity of the surface about to be acted on**, not **authenticity of what a human's eyes saw**:
+
+- Proves: the executed action corresponds to the exact surface that was approved, and — when signed — that the approval is non-repudiable. Any post-approval drift is refused.
+- Does **not** prove: that the displayed values were themselves true at approval time (a renderer that lied *before* the human approved is out of scope — see §8), or that settlement succeeded. Those are separate attestations.
 
 ### 4.5 Conformance
 
@@ -114,11 +118,20 @@ Because **AG-UI is the runtime that carries A2UI / MCP-UI / Open-JSON-UI**, defi
 
 An open-source reference exists that resolves agent-rendered UI surfaces (e.g. a representative purchase surface) into an enforced tree, computes the consent digest over displayed content and the resolved action target, binds it to a signed, replayable receipt at approval time, and refuses on mismatch at execute time — demonstrated on two scenarios (amount swap via a data-model update; destination swap under an unchanged label). Available for review.
 
-## 8. Threat model (brief)
+## 8. Threat model
 
-In scope: a dishonest or injected agent that renders one surface and acts on another; drift between display and settlement. Out of scope: a compromised renderer that both displays and signs maliciously (mitigated by a trusted renderer/device key, a deployment concern); the truthfulness of displayed data (a separate attestation from its source).
+**In scope — post-approval drift.** A dishonest or injected agent that renders one surface and acts on another; any change to the resolved action or the displayed values between the human's approval and the call — an `updateDataModel`, a swapped data-model path, a different server-side charge, a re-pointed click target. The dispatch gate (§4.3) recomputes and refuses, with no trusted display required.
 
-## 9. Prior art & alignment (AP2 / FIDO)
+**Out of scope — a renderer that lied *before* approval.** If the surface the human approved was already a lie, the binding faithfully attests that lie and the gate admits it. Catching that is *authenticity of what was displayed*, which is unachievable outside a surface the verifier owns (a trusted path / secure display, or a renderer/device key the verifier trusts — a deployment concern). This RFC gives integrity of the surface about to be acted on, and names this residual rather than implying it away.
+
+Also out of scope: the truthfulness of the underlying data (a separate attestation from its source) and whether settlement succeeded (signed by whoever performs it).
+
+## 9. Prior art & alignment
+
+**WYSIWYS is not new; its application to agent tool-calls is.** The property has independent, battle-tested lineages worth naming — and the honest limits each one hit sharpen this one.
+
+- **Payments — PSD2 dynamic linking.** Under the EU strong-customer-authentication rules, the authentication code must be *dynamically linked* to the specific amount and payee shown to the user, and any change to either invalidates the code. "Show X, settle Y" is therefore already a named non-conformance, written as a property of the authorization code rather than of the mandate. The limit is instructive: dynamic linking binds the code to the *values*, not to what was *rendered* on a screen the issuer does not control; payments moved the residual to *liability*, assigning loss to the party best placed to prevent it. The agent case is drawn differently — the party that recomputes (the host / gateway that dispatches the tool-call) is often itself downstream of the renderer, so the invalidation can bind to the **dispatched action**, not only the displayed values.
+- **Web3 — EIP-712 / ERC-7730 clear signing.** "What you see is what you sign" is the hardware-wallet discipline. EIP-712 structured-data signing makes a signature cover typed, human-meaningful fields instead of opaque bytes; ERC-7730 (clear-signing metadata) standardizes how a wallet renders what is being signed, binding the display to the signed payload — the countermeasure to *blind signing*. This RFC is the same move for agent-rendered surfaces and tool-calls, where no wallet owns the display.
 
 The agentic-payments world has independently converged on the same property, which validates this primitive and shows where it fits. Google's **Agent Payments Protocol (AP2)** — whose core specification work is continuing in the **FIDO Alliance** — defines a **Trusted Surface**: *"a secure, non-agentic interface that renders Mandate Content to the User for authorization and consent,"* producing a tamper-evident, signed Mandate (a Verifiable Digital Credential). The confirmation UI the user sees (merchant, amount, line items) is carried in the signed transaction data and hash-bound to the mandate, and AP2's threat model explicitly treats the agent as a potential attacker. In other words, AP2 is the **payment-specific instantiation** of the property this RFC generalizes.
 
@@ -136,6 +149,7 @@ This RFC therefore aligns with, rather than competes with, AP2/FIDO: same proper
 - Canonicalization details shared across protocols (so a digest is portable).
 - Interaction with streaming surface/state updates between render and dispatch.
 - Alignment with AP2 mandate hashing (`sd_hash` / `checkout_hash`) so a consent digest can feed a payment mandate directly.
+- **Agentic on-chain execution.** Where an agent both renders a surface *and* signs/dispatches a transaction, the consent digest and the EIP-712 signed payload collapse into a single binding point — a natural home for WYSIWYS (agentic wallets, x402-style agent payments, autonomous DeFi) that no current standard owns.
 
 ---
 
