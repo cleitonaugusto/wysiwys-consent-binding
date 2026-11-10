@@ -75,7 +75,7 @@ When the renderer dispatches the action (or the client submits the human's decis
 "WYSIWYS-SIG\x01"  str alg  str digest  str action  u64(nonce)
 ```
 
-(same string/integer encoding as §4.1; the distinct prefix prevents collision with the surface bytes). `nonce` gives replay resistance. Signing is a deployment choice; the digest alone already lets a verifier that recomputes the surface detect drift.
+(same string/integer encoding as §4.1; the distinct prefix prevents collision with the surface bytes). `nonce` gives replay resistance. Signing is a deployment choice; the digest alone already lets a verifier that recomputes the surface detect drift, provided the binding reaches it over a channel the adversary cannot modify. Anyone who can edit the dispatched action can also recompute an unsigned digest over the edited surface. A verifier that is configured with a key, or that receives the binding over a channel the adversary can modify, MUST refuse a binding that carries no `sig`; accepting an unsigned binding in that case reduces the check to digest-only.
 
 **Protocol placement.** In AG-UI the binding rides in `resume[].metadata` (the slot the spec describes as "a signature proving the human decision was not tampered with"), namespaced under a `wysiwys` key and tied to the `interruptId`/`toolCallId`. In A2UI it is a new optional `action.consent` field; in MCP-UI it is carried in the `postMessage` result; in Open-JSON-UI it accompanies the action event.
 
